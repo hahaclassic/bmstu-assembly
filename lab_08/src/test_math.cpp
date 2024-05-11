@@ -61,7 +61,7 @@ void time_mesurement_asm(int times, Type a, Type b)                 // шабл�
 
 int main()
 {
-    double a = -1.23, b = 1023.1;
+    double a = -2134234.3342134, b = 1234234.1303040;
 
     printf("Float:          ");
     TIME_MEASUREMENT(float)(REPEATS_COUNT, a, b);

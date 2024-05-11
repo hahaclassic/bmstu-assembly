@@ -1,72 +1,61 @@
-# Пояснение про некоторые опции gcc:
-# -m80387 - заставляет компилятор генерировать инструкции для операций с плавающей запятой
-# -mno-80387 - заставляет компилятор генерировать инструкции, использующие библиотечные вызовы для операций с плавающей запятой
-# -mno-sse - запрещаем компилятору использовать регистры XMM/MMX и инструкции SSE
-
-# Ключ -mno-sse ОПЦИОНАЛЕН!!!!! (по крайней мере, на компьютере автора) Без него компилятор генерирует те же самые инструкции 
-# (не используя регистры XMM/MMX и инструкции SSE), потому что ключ -m80387 уже заставляет компилятор отключить SSE.
-# Из последней ссылки из readme к лабе: "При их компиляции с параметром -O0 gcc использует регистры XMM/MMX и инструкции SSE, 
-# если специально не заданы параметры -mno-sse (и другие)".
-# Слово "другие", видимо, является ключевым.
-
-# Также по ходу дела выяснилось, что для распознавания интеловского синтаксиса (а не нативного под gcc) достаточно компиляции с опцией -masm=intel,
-# и не обязательно в начале каждой вставки указывать ".intel_syntax noprefix".
-
 SRC_DIR := ./src
-_MAKE_OUT_DIR_ := $(shell mkdir -p out)
-_MAKE_ASM_DIR_ := $(shell mkdir -p assembly)
-_MAKE_DISASM_DIR_ := $(shell mkdir -p disassembly)
+OUT_DIR := ./out
+ASM_DIR := ./assembly
+DIS_DIR := ./disassembly
 
-.PHONY: math_sse math_fpu math_asm math sin run assembly disassembly clean
+.PHONY: math sin root assembly disassembly clean
 
-math_sse:
-	@echo
-	@echo "SSE: "
-	g++ $(SRC_DIR)/test_math.cpp -mno-80387 -DSSE -O0 -o test_math_sse.exe
-	./test_math_sse.exe
-
-math_fpu:
-	@echo
-	@echo "FPU: "
-	g++ $(SRC_DIR)/test_math.cpp -m80387 -mno-sse -DFLOAT_80 -O0 -o test_math_fpu.exe
-	./test_math_fpu.exe
-
-math_asm:
-	@echo
-	@echo "ASM: "
+build-math: 
+	g++ $(SRC_DIR)/test_math.cpp -mno-80387 -O0 -o test_math_no_m80387.exe
+	g++ $(SRC_DIR)/test_math.cpp -m80387 -mno-sse -O0 -o test_math_m80387.exe
 	g++ $(SRC_DIR)/test_math.cpp -masm=intel -DASM -O0 -o test_math_asm.exe
+
+math:
+	@echo
+	@echo "no m80387: "
+	./test_math_no_m80387.exe
+
+	@echo
+	@echo "m80387: "
+	./test_math_m80387.exe
+
+	@echo
+	@echo "asm inserts: "
 	./test_math_asm.exe
 
-math: math_sse math_fpu math_asm
 
 sin:
 	@echo
-	g++ $(SRC_DIR)/test_sin.cpp -masm=intel -o test_sin.exe
+	g++ $(SRC_DIR)/test_sin.cpp -masm=intel -O0 -o test_sin.exe
 	./test_sin.exe
-
-run: math sin
 
 root:
 	gcc $(SRC_DIR)/find_root.c -masm=intel -std=c99 -Wall -Wextra -Werror -Wpedantic -o find_root.exe
 
-# Посмотреть ассемблерный код можно 2 способами:
+assembly: 
+	mkdir -p $@
+	g++ -S $(SRC_DIR)/test_math.cpp -mno-80387 -O0 -o $(ASM_DIR)/test_math_no_m80387.s
+	g++ -S $(SRC_DIR)/test_math.cpp -m80387 -mno-sse -O0 -o $(ASM_DIR)/test_math_m80387.s
+	g++ -S $(SRC_DIR)/test_math.cpp -masm=intel -DASM -O0  -o $(ASM_DIR)/test_math_asm.s
+	g++ -S $(SRC_DIR)/test_sin.cpp -masm=intel -O0 -o $(ASM_DIR)/test_sin.s
+	g++ -S $(SRC_DIR)/find_root.c -masm=intel -O0 -o $(ASM_DIR)/find_root.s
 
-assembly:
-	g++ -S $(SRC_DIR)/test_math.cpp -mno-80387 -DSSE -O0 -o assembly/test_math_sse.s
-	g++ -S $(SRC_DIR)/test_math.cpp -m80387 -mno-sse -DFLOAT_80 -O0 -o assembly/test_math_fpu.s
-	g++ -S $(SRC_DIR)/test_math.cpp -masm=intel -DASM -O0 -o assembly/test_math_asm.s
-	g++ -S $(SRC_DIR)/test_sin.cpp -masm=intel -o assembly/test_sin.s
-	g++ -S $(SRC_DIR)/find_root.c -masm=intel -o assembly/find_root.s
+disassembly: $(OUT_DIR)
+	mkdir -p $@
+	g++ -c $(SRC_DIR)/test_math.cpp -mno-80387 -O0 -o $(OUT_DIR)/test_math_no_m80387.o
+	g++ -c $(SRC_DIR)/test_math.cpp -m80387 -O0 -o $(OUT_DIR)/test_math_m80387.o
+	g++ -c $(SRC_DIR)/test_math.cpp -masm=intel -DASM -O0 -o $(OUT_DIR)/test_math_asm.o
+	g++ -c $(SRC_DIR)/test_sin.cpp -masm=intel -O0 -o $(OUT_DIR)/test_sin.o
+	g++ -c $(SRC_DIR)/find_root.c -masm=intel -O0 -o $(OUT_DIR)/find_root.o
 
-disassembly:
-	g++ -c $(SRC_DIR)/test_math.cpp -mno-80387 -DSSE -O0 -o out/test_math_sse.o
-	g++ -c $(SRC_DIR)/test_math.cpp -m80387 -mno-sse -DFLOAT_80 -O0 -o out/test_math_fpu.o
-	g++ -c $(SRC_DIR)/test_math.cpp -masm=intel -DASM -O0 -o out/test_math_asm.o
-	g++ -c $(SRC_DIR)/test_sin.cpp -masm=intel -o out/test_sin.o
-	objdump -M intel-mnemonic -d out/test_math_sse.o  > disassembly/test_math_sse.txt
-	objdump -M intel-mnemonic -d out/test_math_fpu.o  > disassembly/test_math_fpu.txt
-	objdump -M intel-mnemonic -d out/test_math_asm.o  > disassembly/test_math_asm.txt
-	objdump -M intel-mnemonic -d out/test_sin.o  > disassembly/test_sin.txt
+	objdump -M intel-mnemonic -d $(OUT_DIR)/test_math_no_m80387.o  > $(DIS_DIR)/test_math_no_m80387.txt
+	objdump -M intel-mnemonic -d $(OUT_DIR)/test_math_m80387.o  > $(DIS_DIR)/test_math_m80387.txt
+	objdump -M intel-mnemonic -d $(OUT_DIR)/test_math_asm.o  > $(DIS_DIR)/test_math_asm.txt
+	objdump -M intel-mnemonic -d $(OUT_DIR)/test_sin.o  > $(DIS_DIR)/test_sin.txt
+	objdump -M intel-mnemonic -d $(OUT_DIR)/find_root.o  > $(DIS_DIR)/find_root.txt
 
 clean:
 	rm -rf out/* assembly/* disassembly/* *.exe
+
+$(OUT_DIR): 
+	mkdir -p $@
