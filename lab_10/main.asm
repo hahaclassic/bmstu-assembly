@@ -255,18 +255,18 @@ button_clicked_handler:
 
     call find_root
 
-    mov rdi, qword [double_format]
-    movsd xmm0, [result]
-    mov rax, 1
-    call g_strdup_printf
-    mov [str_ptr], rax
-    ;call convert_to_str
+    ; mov rdi, qword [double_format]
+    ; movsd xmm0, [result]
+    ; mov rax, 1
+    ; call g_strdup_printf
+    ; mov [str_ptr], rax
+    call convert_to_str
 
     mov rdi, qword [rel output_result]
-    mov rsi, [str_ptr]
+    mov rsi, [str_result]
     call gtk_label_set_text
-    mov rdi, [str_ptr]
-    call g_free
+    ; mov rdi, [str_ptr]
+    ; call g_free
     ret
 
 
@@ -289,10 +289,10 @@ convert_to_int:
 
 convert_to_str: 
     sub rsp, 8
-    mov rdi, str_result
-    mov rsi, double_format
-    mov rdx, result
-    mov rax, 0
+    lea rdi, [str_result]
+    lea rsi, [double_format]
+    movsd xmm0, qword [result]
+    mov rax, 1
     call sprintf
     add rsp, 8
     ret
