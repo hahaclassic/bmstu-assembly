@@ -55,9 +55,11 @@ button: resq 1
 box: resq 1
 
 section .data
-str_result: times 100 db 0
-result: dq 0
-str_ptr: dq 0
+result_buffer: db 100 dup(0)
+double_result: dq 0
+double_start: dq 0
+double_end: dq 0
+int_iterations: dq 0
 
 section .rodata
 signal:
@@ -72,6 +74,7 @@ label_result_text: db "Result:", 0
 button_text: db "Find root", 0
 double_format: db "%lf", 0
 int_format: db "%d", 0
+error_msg: db "[ERR]: cant find the root.", 0
 
 section .text
 _destroy_window:
@@ -163,7 +166,7 @@ main:
     call gtk_widget_set_halign
 
     mov rdi, qword [rel output_result]
-    mov rsi, str_result
+    mov rsi, result_buffer
     call gtk_label_set_text
     mov rdi, qword [rel output_result]
     mov rsi, 1
@@ -230,74 +233,61 @@ main:
     ret
 
 button_clicked_handler:
-    ; Обработчик события нажатия кнопки
-    ; Считываем данные из полей ввода
-    mov rdi, [entry_start]
+    push rbp
+    mov rbp, rsp
+    mov rdi, qword [rel entry_start]
     call gtk_entry_get_text
     mov rdi, rax
-    xor rsi, rsi
-    call g_ascii_strtod
-    movsd xmm0, [rsp]
+    mov rsi, double_format
+    lea rdx, double_start
+    call sscanf
+    pop rbp
 
-    mov rdi, [entry_end]
+    push rbp
+    mov rbp, rsp
+    mov rdi, qword [rel entry_end]
     call gtk_entry_get_text
     mov rdi, rax
-    xor rsi, rsi
-    call g_ascii_strtod
-    movsd xmm1, [rsp]
+    mov rsi, double_format
+    lea rdx, double_end
+    call sscanf
+    pop rbp
 
-    mov rdi, [entry_iterations]
+    push rbp
+    mov rbp, rsp
+    mov rdi, qword [rel entry_iterations]
     call gtk_entry_get_text
-    call convert_to_int
     mov rdi, rax
-
-    mov rsi, [result]
+    mov rsi, int_format
+    mov rdx, int_iterations
+    call sscanf
+    pop rbp
+   
+    movq xmm0, qword [double_start]
+    movq xmm1, qword [double_end]
+    lea rsi, qword [rel double_result]
+    mov rdi, int_iterations
 
     call find_root
 
-    ; mov rdi, qword [double_format]
-    ; movsd xmm0, [result]
-    ; mov rax, 1
-    ; call g_strdup_printf
-    ; mov [str_ptr], rax
-    call convert_to_str
-
+    cmp rax, 0
+    je show_result
+show_error:
     mov rdi, qword [rel output_result]
-    mov rsi, [str_result]
+    mov rsi, error_msg
     call gtk_label_set_text
-    ; mov rdi, [str_ptr]
-    ; call g_free
-    ret
-
-
-; convert_to_double:
-;     sub rsp, 8 
-;     mov rdi, rax
-;     mov rsi, double_format
-;     lea rdx, [result]
-;     mov rax, 0 
-;     call sscanf
-;     add rsp, 8 
-;     ret
-
-convert_to_int:
-    sub rsp, 8
-    mov rdi, rax
-    call atoi
-    add rsp, 8
-    ret
-
-convert_to_str: 
-    sub rsp, 8
-    lea rdi, [str_result]
-    lea rsi, [double_format]
-    movsd xmm0, qword [result]
-    mov rax, 1
-    call sprintf
-    add rsp, 8
     ret
     
-fuck:
+show_result:
+    push rbp
+    movsd xmm0, qword [double_result]
+    mov rdi, result_buffer
+    mov rsi, double_format
+    mov	eax, 1
+    call sprintf
+    pop rbp
+
     mov rdi, qword [rel output_result]
-    mov rsi, title
+    mov rsi, result_buffer
     call gtk_label_set_text
+    ret

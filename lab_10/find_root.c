@@ -29,9 +29,9 @@ double function(double x)
 
 int find_root(double a, double b, int iterations, double *result) 
 {   
-    double x = 0, a_val, b_val, x_val = 0;
+    double x = a, a_val, b_val, x_val = 0;
 
-    if (function(a) * function(b) > 0) {
+    if (a > b || iterations < 0 || function(a) * function(b) > 0) {
         return EXIT_FAILURE;
     }
 
@@ -71,7 +71,7 @@ int find_root(double a, double b, int iterations, double *result)
         }
     }
 
-    (*result) = a_val;
+    (*result) = x;
     return EXIT_SUCCESS; 
 }
 
