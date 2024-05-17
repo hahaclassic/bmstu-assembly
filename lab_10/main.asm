@@ -262,7 +262,7 @@ button_clicked_handler:
     mov rdx, int_iterations
     call sscanf
     pop rbp
-   
+
     movq xmm0, qword [double_start]
     movq xmm1, qword [double_end]
     lea rsi, qword [rel double_result]
